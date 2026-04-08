@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NorthAxis Bank — Operation Clearwater Fraud Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0D1B2A;color:#E8E6E0;font-size:13px}
+  .shell{max-width:1200px;margin:0 auto;padding:1.5rem}
+  .topbar{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:0.5px solid rgba(255,255,255,0.1)}
+  .topbar-left p{font-size:11px;color:#8A8880;margin-bottom:4px}
+  .topbar-left h1{font-size:20px;font-weight:600;color:#fff;margin-bottom:4px}
+  .topbar-left p.sub{font-size:12px;color:#8A8880;margin-bottom:0}
+  .topbar-right{text-align:right}
+  .badge-conf{display:inline-block;font-size:10px;font-weight:600;padding:3px 10px;border-radius:6px;background:#3D1515;color:#F09595;border:0.5px solid #7A2D2D;margin-bottom:6px;letter-spacing:0.05em}
+  .topbar-right p{font-size:11px;color:#8A8880;margin-top:2px}
+  .page-tabs{display:flex;gap:6px;margin-bottom:1.5rem}
+  .tab{padding:7px 16px;border-radius:8px;font-size:12px;cursor:pointer;border:0.5px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.05);color:#8A8880;transition:all 0.15s}
+  .tab:hover{background:rgba(255,255,255,0.1);color:#fff}
+  .tab.active{background:#185FA5;color:#fff;border-color:#185FA5}
+  .page{display:none}.page.active{display:block}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.2rem}
+  .kpi{background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.1);border-radius:10px;padding:14px}
+  .kpi-label{font-size:11px;color:#8A8880;margin-bottom:5px;font-weight:500}
+  .kpi-value{font-size:22px;font-weight:600}
+  .kpi-sub{font-size:10px;color:#6A6860;margin-top:3px}
+  .red{color:#F09595}.amb{color:#FAC775}.blu{color:#85B7EB}.grn{color:#9FE1CB}.wht{color:#fff}
+  .chart-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:10px;margin-bottom:10px}
+  .chart-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}
+  .chart-grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px}
+  .card{background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px}
+  .card-title{font-size:10px;font-weight:600;color:#8A8880;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.07em}
+  .slicer-row{display:flex;gap:12px;margin-bottom:1.2rem;align-items:center;flex-wrap:wrap}
+  .slicer-label{font-size:11px;color:#8A8880;white-space:nowrap}
+  select{font-size:12px;padding:5px 10px;border-radius:8px;border:0.5px solid rgba(255,255,255,0.2);background:#1A2D3F;color:#E8E6E0;cursor:pointer}
+  select:focus{outline:none;border-color:#378ADD}
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;font-size:11px;color:#8A8880}
+  .legend span{display:flex;align-items:center;gap:5px}
+  .leg-sq{width:10px;height:10px;border-radius:2px;display:inline-block;flex-shrink:0}
+  .tbl{width:100%;border-collapse:collapse;font-size:12px}
+  .tbl th{font-size:10px;font-weight:600;color:#8A8880;text-align:left;padding:7px 8px;border-bottom:0.5px solid rgba(255,255,255,0.1);text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap}
+  .tbl td{padding:8px 8px;border-bottom:0.5px solid rgba(255,255,255,0.06);color:#E8E6E0;vertical-align:middle}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl tr:hover td{background:rgba(255,255,255,0.04)}
+  .pill{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;display:inline-block;white-space:nowrap}
+  .pill-red{background:#3D1515;color:#F09595}
+  .pill-amb{background:#3D2A08;color:#FAC775}
+  .pill-blu{background:#0D2540;color:#85B7EB}
+  .pill-grn{background:#162808;color:#9FE1CB}
+  .pill-gry{background:#2A2A28;color:#8A8880}
+  .bar-bg{background:rgba(255,255,255,0.1);border-radius:4px;height:5px;overflow:hidden;display:inline-block;width:55px;vertical-align:middle;margin-left:6px}
+  .bar-fill{height:100%;border-radius:4px}
+  .divider{border:none;border-top:0.5px solid rgba(255,255,255,0.08);margin:1rem 0}
+  .footer{font-size:10px;color:#6A6860;text-align:center;margin-top:2rem;padding-top:1rem;border-top:0.5px solid rgba(255,255,255,0.08)}
+  @media(max-width:700px){
+    .kpi-grid{grid-template-columns:repeat(2,1fr)}
+    .chart-grid,.chart-grid-2,.chart-grid-3{grid-template-columns:1fr}
+    .page-tabs{flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <p>NorthAxis Bank plc — Risk Intelligence Division</p>
+      <h1>Operation Clearwater — Fraud Dashboard</h1>
+      <p class="sub">Transaction Fraud Detection &amp; Risk Intelligence | Jan – Sep 2024</p>
+    </div>
+    <div class="topbar-right">
+      <div><span class="badge-conf">CONFIDENTIAL</span></div>
+      <p>REF: NAB-RI-2024-09</p>
+      <p>Est. exposure: $2.3M+</p>
+    </div>
+  </div>
+
+  <div class="page-tabs">
+    <div class="tab active" onclick="showPage('p1',this)">Executive overview</div>
+    <div class="tab" onclick="showPage('p2',this)">Anomaly &amp; fraud signals</div>
+    <div class="tab" onclick="showPage('p3',this)">Customer watchlist</div>
+  </div>
+
+  <!-- PAGE 1 -->
+  <div id="p1" class="page active">
+    <div class="slicer-row">
+      <span class="slicer-label">Quarter</span>
+      <select id="qSlicer" onchange="updateP1()">
+        <option value="all">All quarters</option>
+        <option value="Q1">Q1 — Jan to Mar</option>
+        <option value="Q2">Q2 — Apr to Jun</option>
+        <option value="Q3">Q3 — Jul to Sep</option>
+      </select>
+      <span class="slicer-label">Channel</span>
+      <select id="chSlicer" onchange="updateP1()">
+        <option value="all">All channels</option>
+        <option value="Mobile">Mobile</option>
+        <option value="Web">Web</option>
+        <option value="ATM">ATM</option>
+        <option value="Branch">Branch</option>
+      </select>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Total transactions</div><div class="kpi-value blu" id="k1">195,276</div><div class="kpi-sub">Jan – Sep 2024</div></div>
+      <div class="kpi"><div class="kpi-label">Total value USD</div><div class="kpi-value wht" id="k2">$84.3M</div><div class="kpi-sub">All channels combined</div></div>
+      <div class="kpi"><div class="kpi-label">Flagged %</div><div class="kpi-value amb" id="k3">6.39%</div><div class="kpi-sub">of all transactions</div></div>
+      <div class="kpi"><div class="kpi-label">Suspicious value</div><div class="kpi-value red" id="k4">$2.3M+</div><div class="kpi-sub">Estimated exposure</div></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-title">Monthly transaction volume vs flagged transactions</div>
+        <div class="legend">
+          <span><span class="leg-sq" style="background:#378ADD"></span>Total transactions</span>
+          <span><span class="leg-sq" style="background:#E24B4A"></span>Flagged transactions</span>
+        </div>
+        <div style="position:relative;width:100%;height:220px"><canvas id="c1"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Flagged % by channel</div>
+        <div style="position:relative;width:100%;height:240px"><canvas id="c2"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-title">Monthly KPI summary</div>
+        <table class="tbl">
+          <thead><tr><th>Month</th><th>Transactions</th><th>Value USD</th><th>Flagged</th><th>Flagged %</th></tr></thead>
+          <tbody id="kpiTbl"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Total value by customer segment</div>
+        <div class="legend" id="donutLeg"></div>
+        <div style="position:relative;width:100%;height:190px"><canvas id="c3"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 2 -->
+  <div id="p2" class="page">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Off-hours transactions</div><div class="kpi-value amb">18,340</div><div class="kpi-sub">1AM – 4AM window</div></div>
+      <div class="kpi"><div class="kpi-label">Off-hours flagged %</div><div class="kpi-value red">31.2%</div><div class="kpi-sub">vs 4.1% in normal hours</div></div>
+      <div class="kpi"><div class="kpi-label">Geo mismatches</div><div class="kpi-value amb">4,821</div><div class="kpi-sub">Cross-border anomalies</div></div>
+      <div class="kpi"><div class="kpi-label">Shell merchant txns</div><div class="kpi-value red">7,103</div><div class="kpi-sub">High-risk merchants</div></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-title">Flagged transactions by hour of day</div>
+        <div class="legend">
+          <span><span class="leg-sq" style="background:#378ADD"></span>Normal hours</span>
+          <span><span class="leg-sq" style="background:#E24B4A"></span>Flagged</span>
+        </div>
+        <div style="position:relative;width:100%;height:220px"><canvas id="c4"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Flagged % by merchant category</div>
+        <div style="position:relative;width:100%;height:240px"><canvas id="c5"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-grid-2">
+      <div class="card">
+        <div class="card-title">Merchant risk table</div>
+        <table class="tbl">
+          <thead><tr><th>Merchant</th><th>Category</th><th>Shell</th><th>Risk</th><th>Flagged %</th></tr></thead>
+          <tbody>
+            <tr><td>CryptoXchange</td><td>Crypto</td><td><span class="pill pill-red">Yes</span></td><td><span class="pill pill-red">Critical</span></td><td>78.4%</td></tr>
+            <tr><td>QuickTransfer</td><td>Wire</td><td><span class="pill pill-red">Yes</span></td><td><span class="pill pill-red">High</span></td><td>61.2%</td></tr>
+            <tr><td>NightMart</td><td>Retail</td><td><span class="pill pill-gry">No</span></td><td><span class="pill pill-amb">High</span></td><td>44.8%</td></tr>
+            <tr><td>GlobalPay</td><td>Fintech</td><td><span class="pill pill-red">Yes</span></td><td><span class="pill pill-amb">High</span></td><td>38.1%</td></tr>
+            <tr><td>ValueStore</td><td>Retail</td><td><span class="pill pill-gry">No</span></td><td><span class="pill pill-blu">Medium</span></td><td>22.3%</td></tr>
+            <tr><td>TravelEase</td><td>Travel</td><td><span class="pill pill-gry">No</span></td><td><span class="pill pill-grn">Low</span></td><td>9.2%</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">Off-hours activity by channel</div>
+        <div style="position:relative;width:100%;height:240px"><canvas id="c6"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 3 -->
+  <div id="p3" class="page">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-label">Critical tier customers</div><div class="kpi-value red">312</div><div class="kpi-sub">Score 80–100 — freeze now</div></div>
+      <div class="kpi"><div class="kpi-label">High tier customers</div><div class="kpi-value amb">718</div><div class="kpi-sub">Score 60–79 — priority review</div></div>
+      <div class="kpi"><div class="kpi-label">Poor KYC customers</div><div class="kpi-value amb">1,104</div><div class="kpi-sub">Unverified or expired</div></div>
+      <div class="kpi"><div class="kpi-label">Dormant reactivations</div><div class="kpi-value red">89</div><div class="kpi-sub">60+ days inactive</div></div>
+    </div>
+
+    <div class="chart-grid-2" style="margin-bottom:10px">
+      <div class="card">
+        <div class="card-title">Flagged % by KYC status</div>
+        <div style="position:relative;width:100%;height:210px"><canvas id="c7"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Risk tier distribution</div>
+        <div class="legend" id="tierLeg"></div>
+        <div style="position:relative;width:100%;height:185px"><canvas id="c8"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Customer watchlist — top freeze candidates</div>
+      <div style="overflow-x:auto">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>Customer ID</th><th>Name</th><th>Segment</th><th>KYC</th>
+              <th>Flagged %</th><th>Geo mismatches</th><th>Velocity hits</th>
+              <th>Risk score</th><th>Tier</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="font-family:monospace;font-size:11px">NAB-C004821</td><td>Adaeze Okonkwo</td><td>Corporate</td><td><span class="pill pill-red">Expired</span></td><td>94.2%</td><td>12<span class="bar-bg"><span class="bar-fill" style="width:100%;background:#E24B4A"></span></span></td><td>8</td><td><b style="color:#F09595">94</b></td><td><span class="pill pill-red">Critical</span></td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">NAB-C002173</td><td>Kwame Asante</td><td>SME</td><td><span class="pill pill-red">Unverified</span></td><td>88.7%</td><td>9<span class="bar-bg"><span class="bar-fill" style="width:75%;background:#E24B4A"></span></span></td><td>6</td><td><b style="color:#F09595">91</b></td><td><span class="pill pill-red">Critical</span></td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">NAB-C007654</td><td>Fatima Al-Hassan</td><td>Corporate</td><td><span class="pill pill-gry">Verified</span></td><td>82.1%</td><td>14<span class="bar-bg"><span class="bar-fill" style="width:90%;background:#E24B4A"></span></span></td><td>11</td><td><b style="color:#F09595">88</b></td><td><span class="pill pill-red">Critical</span></td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">NAB-C001290</td><td>Emeka Nwosu</td><td>Retail</td><td><span class="pill pill-red">Expired</span></td><td>79.4%</td><td>7<span class="bar-bg"><span class="bar-fill" style="width:58%;background:#E24B4A"></span></span></td><td>5</td><td><b style="color:#F09595">85</b></td><td><span class="pill pill-red">Critical</span></td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">NAB-C005512</td><td>Amara Diallo</td><td>SME</td><td><span class="pill pill-red">Unverified</span></td><td>76.8%</td><td>5<span class="bar-bg"><span class="bar-fill" style="width:42%;background:#E24B4A"></span></span></td><td>4</td><td><b style="color:#F09595">82</b></td><td><span class="pill pill-red">Critical</span></td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">NAB-C003348</td><td>Chidi Obi</td><td>Corporate</td><td><span class="pill pill-gry">Verified</span></td><td>68.3%</td><td>11<span class="bar-bg"><span class="bar-fill" style="width:85%;background:#EF9F27"></span></span></td><td>7</td><td><b style="color:#FAC775">76</b></td><td><span class="pill pill-amb">High</span></td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">NAB-C006701</td><td>Ngozi Eze</td><td>Retail</td><td><span class="pill pill-red">Expired</span></td><td>62.1%</td><td>3<span class="bar-bg"><span class="bar-fill" style="width:25%;background:#EF9F27"></span></span></td><td>2</td><td><b style="color:#FAC775">71</b></td><td><span class="pill pill-amb">High</span></td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">NAB-C008843</td><td>Seun Adeyemi</td><td>SME</td><td><span class="pill pill-red">Unverified</span></td><td>58.9%</td><td>6<span class="bar-bg"><span class="bar-fill" style="width:50%;background:#EF9F27"></span></span></td><td>3</td><td><b style="color:#FAC775">68</b></td><td><span class="pill pill-amb">High</span></td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">NAB-C009112</td><td>Tunde Bakare</td><td>Retail</td><td><span class="pill pill-amb">Pending</span></td><td>51.3%</td><td>4<span class="bar-bg"><span class="bar-fill" style="width:33%;background:#378ADD"></span></span></td><td>2</td><td><b style="color:#85B7EB">58</b></td><td><span class="pill pill-blu">Medium</span></td></tr>
+            <tr><td style="font-family:monospace;font-size:11px">NAB-C010340</td><td>Ifeoma Okeke</td><td>SME</td><td><span class="pill pill-gry">Verified</span></td><td>44.7%</td><td>2<span class="bar-bg"><span class="bar-fill" style="width:17%;background:#378ADD"></span></span></td><td>1</td><td><b style="color:#85B7EB">52</b></td><td><span class="pill pill-blu">Medium</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    NorthAxis Bank plc — Risk Intelligence Division — REF: NAB-RI-2024-09 — INTERNAL USE ONLY — NOT FOR DISTRIBUTION
+  </div>
+</div>
+
+<script>
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep'];
+const totalTxns = [19200,18800,20100,21300,22400,23100,26800,25400,18176];
+const flaggedTxns = [480,510,580,620,710,890,2980,2440,1270];
+const monthlyVal = [8.1,7.9,8.4,8.9,9.2,9.6,11.8,10.9,9.5];
+const charts = {};
+
+function mk(id,type,data,options){
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id),{type,data,options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},...options}});
+}
+
+function buildKpiTable(){
+  document.getElementById('kpiTbl').innerHTML = months.map((m,i)=>{
+    const fp=(flaggedTxns[i]/totalTxns[i]*100).toFixed(1);
+    const bg=fp>10?'background:#3D1515;color:#F09595':fp>5?'background:#3D2A08;color:#FAC775':'color:#9FE1CB';
+    return `<tr><td>${m}</td><td>${totalTxns[i].toLocaleString()}</td><td>$${monthlyVal[i]}M</td><td>${flaggedTxns[i].toLocaleString()}</td><td style="${bg};font-weight:600;padding:8px 8px">${fp}%</td></tr>`;
+  }).join('');
+}
+
+function buildP1(){
+  buildKpiTable();
+  mk('c1','bar',{
+    labels:months,
+    datasets:[
+      {label:'Total',data:totalTxns,backgroundColor:'rgba(55,138,221,0.5)',borderColor:'#378ADD',borderWidth:1,yAxisID:'y'},
+      {label:'Flagged',data:flaggedTxns,type:'line',borderColor:'#E24B4A',backgroundColor:'transparent',pointBackgroundColor:'#E24B4A',pointRadius:4,tension:0.3,yAxisID:'y1'}
+    ]
+  },{scales:{
+    y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#8A8880',font:{size:10}}},
+    y1:{position:'right',beginAtZero:true,grid:{display:false},ticks:{color:'#8A8880',font:{size:10}}},
+    x:{ticks:{color:'#8A8880',font:{size:10},autoSkip:false},grid:{color:'rgba(255,255,255,0.04)'}}
+  }});
+
+  mk('c2','bar',{
+    labels:['Mobile','Web','ATM','Branch'],
+    datasets:[{data:[12.4,9.8,5.2,1.1],backgroundColor:['#E24B4A','#EF9F27','#378ADD','#639922'],borderRadius:5}]
+  },{indexAxis:'y',scales:{
+    x:{beginAtZero:true,ticks:{callback:v=>v+'%',color:'#8A8880',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
+    y:{ticks:{color:'#E8E6E0',font:{size:11}},grid:{display:false}}
+  }});
+
+  const segs=['Retail','SME','Corporate','Private'];
+  const segVals=[28.4,22.1,19.8,14.0];
+  const segColors=['#378ADD','#1D9E75','#534AB7','#D85A30'];
+  document.getElementById('donutLeg').innerHTML=segs.map((s,i)=>`<span><span class="leg-sq" style="background:${segColors[i]}"></span>${s} $${segVals[i]}M</span>`).join('');
+  mk('c3','doughnut',{
+    labels:segs,
+    datasets:[{data:segVals,backgroundColor:segColors,borderWidth:0,hoverOffset:6}]
+  },{cutout:'62%',plugins:{legend:{display:false}}});
+}
+
+function buildP2(){
+  const hours=Array.from({length:24},(_,i)=>i+':00');
+  const flagH=[320,480,610,540,210,180,150,200,380,520,610,580,490,520,600,640,580,510,480,440,410,390,350,330];
+  const normH=[1200,900,700,600,800,1400,2100,2600,2800,2700,2600,2500,2400,2300,2500,2700,2600,2400,2200,2000,1800,1600,1500,1300];
+  mk('c4','bar',{
+    labels:hours,
+    datasets:[
+      {label:'Normal',data:normH,backgroundColor:'rgba(55,138,221,0.4)',stack:'s'},
+      {label:'Flagged',data:flagH,backgroundColor:'#E24B4A',stack:'s'}
+    ]
+  },{scales:{
+    x:{stacked:true,ticks:{color:'#8A8880',font:{size:9},autoSkip:true,maxTicksLimit:12},grid:{color:'rgba(255,255,255,0.04)'}},
+    y:{stacked:true,beginAtZero:true,ticks:{color:'#8A8880',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}}
+  }});
+
+  mk('c5','bar',{
+    labels:['Crypto','Wire transfer','Fintech','Gaming','Retail','Travel'],
+    datasets:[{data:[74.2,58.1,41.3,32.8,18.4,9.2],backgroundColor:['#E24B4A','#E24B4A','#EF9F27','#EF9F27','#378ADD','#639922'],borderRadius:5}]
+  },{indexAxis:'y',scales:{
+    x:{beginAtZero:true,ticks:{callback:v=>v+'%',color:'#8A8880',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
+    y:{ticks:{color:'#E8E6E0',font:{size:11}},grid:{display:false}}
+  }});
+
+  mk('c6','bar',{
+    labels:['Mobile','Web','ATM','Branch'],
+    datasets:[
+      {label:'Off-hours',data:[8240,6120,3140,840],backgroundColor:'#E24B4A',borderRadius:4},
+      {label:'Normal',data:[42100,38200,28400,18900],backgroundColor:'rgba(55,138,221,0.4)',borderRadius:4}
+    ]
+  },{scales:{
+    x:{ticks:{color:'#E8E6E0',font:{size:11}},grid:{display:false}},
+    y:{beginAtZero:true,ticks:{color:'#8A8880',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}}
+  }});
+}
+
+function buildP3(){
+  mk('c7','bar',{
+    labels:['Expired','Unverified','Pending','Verified'],
+    datasets:[{data:[38.4,29.2,14.1,3.8],backgroundColor:['#E24B4A','#EF9F27','#378ADD','#639922'],borderRadius:5}]
+  },{scales:{
+    x:{ticks:{color:'#E8E6E0',font:{size:11}},grid:{display:false}},
+    y:{beginAtZero:true,ticks:{callback:v=>v+'%',color:'#8A8880',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}}
+  }});
+
+  const tiers=['Critical','High','Medium','Low','Minimal'];
+  const tierVals=[312,718,1240,2890,2840];
+  const tierColors=['#E24B4A','#EF9F27','#378ADD','#639922','#888780'];
+  document.getElementById('tierLeg').innerHTML=tiers.map((t,i)=>`<span><span class="leg-sq" style="background:${tierColors[i]}"></span>${t} ${tierVals[i]}</span>`).join('');
+  mk('c8','doughnut',{
+    labels:tiers,
+    datasets:[{data:tierVals,backgroundColor:tierColors,borderWidth:0,hoverOffset:6}]
+  },{cutout:'58%'});
+}
+
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+  if(id==='p2') buildP2();
+  if(id==='p3') buildP3();
+}
+
+function updateP1(){
+  const q=document.getElementById('qSlicer').value;
+  const ch=document.getElementById('chSlicer').value;
+  document.getElementById('k1').textContent=q==='all'?'195,276':q==='Q3'?'70,376':'62,450';
+  document.getElementById('k3').textContent=q==='Q3'?'10.2%':ch==='Mobile'?'12.4%':'6.39%';
+}
+
+buildP1();
+</script>
+</body>
+</html>
